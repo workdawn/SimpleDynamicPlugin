@@ -31,7 +31,7 @@ public class MainActivity extends Activity {
             @Override
             public void onClick(View v) {
                 try{
-                    PluginManager.getPluginManager().loadPlugin(Environment.getExternalStorageDirectory() + "/app-debug.apk");
+                    PluginManager.getPluginManager().loadPlugin(Environment.getExternalStorageDirectory() + "/test_plugin.apk");
                     PluginManager.getPluginManager().startDefaultActivity(MainActivity.this);
                     //PluginManager.getPluginManager().loadPlugin(Environment.getExternalStorageDirectory().getAbsolutePath());
                     //PluginManager.getPluginManager().startActivity(MainActivity.this, new WrapperIntent("com.workdrawn.actvaluetransfer" , "com.workdrawn.actvaluetransfer.MainActivity"));
