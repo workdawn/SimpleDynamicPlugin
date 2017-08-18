@@ -1,6 +1,7 @@
 package com.workdawn.androiddynamicplugin;
 
 import android.app.Activity;
+import android.app.Fragment;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.Environment;
@@ -32,7 +33,8 @@ public class MainActivity extends Activity {
             public void onClick(View v) {
                 try{
                     PluginManager.getPluginManager().loadPlugin(Environment.getExternalStorageDirectory() + "/test_plugin.apk");
-                    PluginManager.getPluginManager().startDefaultActivity(MainActivity.this);
+                    Fragment fragment = PluginManager.getPluginManager().loadPluginFragment("com.workdrawn.actvaluetransfer","com.workdrawn.actvaluetransfer.PluginFragment");
+                    getFragmentManager().beginTransaction().replace(R.id.fragment_container, fragment).commit();
                     //PluginManager.getPluginManager().loadPlugin(Environment.getExternalStorageDirectory().getAbsolutePath());
                     //PluginManager.getPluginManager().startActivity(MainActivity.this, new WrapperIntent("com.workdrawn.actvaluetransfer" , "com.workdrawn.actvaluetransfer.MainActivity"));
                 }catch (Exception e){
@@ -44,8 +46,12 @@ public class MainActivity extends Activity {
         button1.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Intent i = new Intent(MainActivity.this, HostFirstActivity.class);
-                startActivity(i);
+                try{
+                    PluginManager.getPluginManager().loadPlugin(Environment.getExternalStorageDirectory() + "/test_plugin.apk");
+                    PluginManager.getPluginManager().startDefaultActivity(MainActivity.this);
+                }catch (Exception e){
+                    e.printStackTrace();
+                }
             }
         });
     }

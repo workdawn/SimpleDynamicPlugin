@@ -1,6 +1,7 @@
 package com.workdawn.simpledynamicplugin;
 
 import android.app.Application;
+import android.app.Fragment;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
@@ -9,7 +10,9 @@ import android.content.pm.PackageManager;
 import android.content.pm.PackageParser;
 import android.content.res.AssetManager;
 import android.content.res.Resources;
+import android.os.Bundle;
 import android.text.TextUtils;
+import android.util.ArrayMap;
 
 import com.workdawn.simpledynamicplugin.domain.PluginInfo;
 import com.workdawn.simpledynamicplugin.download.IDownload;
@@ -44,6 +47,7 @@ public class PluginManager {
     /**是否已经加载过插件*/
     private static boolean isPluginLoaded = false;
     private PluginInstrumentation pluginInstrumentation;
+    private static final HashMap<String, Class<?>> sClassMap = new HashMap<String, Class<?>>();
 
     private PluginManager(Context hostContext) throws Exception{
         mPluginPath = hostContext.getDir(Constants.PLUGIN_SAVE_PATH_DIR, Context.MODE_PRIVATE);
@@ -78,19 +82,19 @@ public class PluginManager {
         }
         if(tempFile.isDirectory()){
            File[] pluginFiles =  tempFile.listFiles(new FileFilter() {
-                @Override
-                public boolean accept(File pathname) {
-                    if(!pathname.isDirectory()){
-                        String fileName = pathname.getName();
-                        String suffix = "";
-                        if(fileName.contains(".")){
-                            suffix = fileName.substring(fileName.lastIndexOf("."));
-                        }
-                        return suffix.equals(".dex") || suffix.equals(".apk");
-                    }
-                    return false;
-                }
-            });
+               @Override
+               public boolean accept(File pathname) {
+                   if (!pathname.isDirectory()) {
+                       String fileName = pathname.getName();
+                       String suffix = "";
+                       if (fileName.contains(".")) {
+                           suffix = fileName.substring(fileName.lastIndexOf("."));
+                       }
+                       return suffix.equals(".dex") || suffix.equals(".apk");
+                   }
+                   return false;
+               }
+           });
             for (File temp : pluginFiles) {
                 resolvePlugin(temp.getAbsolutePath());
             }
@@ -307,6 +311,45 @@ public class PluginManager {
         }else{
             throw new RuntimeException("Start defaultActivity fail");
         }
+    }
+
+    /**
+     * 加载插件中的fragment
+     * @param pkgName 插件包名
+     * @param className fragment全限定名
+     * @return Fragment
+     * @throws Exception
+     */
+    public Fragment loadPluginFragment(String pkgName, String className) throws Exception{
+        return loadPluginFragment(pkgName, className, null);
+    }
+
+    /**
+     * 加载插件中的fragment
+     * @param pkgName 插件包名
+     * @param className fragment全限定名
+     * @param args 参数
+     * @return Fragment
+     * @throws Exception
+     */
+    public Fragment loadPluginFragment(String pkgName, String className, Bundle args) throws Exception{
+        Class<?> clazz = sClassMap.get(className);
+        if(clazz == null){
+            PluginInfo info = mPlugins.get(pkgName);
+            PluginDexClassLoader classLoader = info.getClassLoader();
+            clazz = classLoader.loadClass(className);
+            if(!Fragment.class.isAssignableFrom(clazz)){
+                throw new RuntimeException("Trying to instantiate a class " + className
+                        + " that is not a Fragment", new ClassCastException());
+            }
+            sClassMap.put(className, clazz);
+        }
+        Fragment f = (Fragment)clazz.newInstance();
+        if (args != null) {
+            args.setClassLoader(f.getClass().getClassLoader());
+            ReflectUtils.setFieldValue(clazz, f, "mArguments", args);
+        }
+        return f;
     }
 
     /**
