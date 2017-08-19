@@ -12,7 +12,6 @@ import android.content.res.AssetManager;
 import android.content.res.Resources;
 import android.os.Bundle;
 import android.text.TextUtils;
-import android.util.ArrayMap;
 
 import com.workdawn.simpledynamicplugin.domain.PluginInfo;
 import com.workdawn.simpledynamicplugin.download.IDownload;
@@ -22,6 +21,7 @@ import com.workdawn.simpledynamicplugin.exception.VirtualActivityNotFoundExcepti
 import com.workdawn.simpledynamicplugin.utils.LoadPluginImpl;
 import com.workdawn.simpledynamicplugin.utils.ReflectUtils;
 import com.workdawn.simpledynamicplugin.utils.Utils;
+import com.workdawn.simpledynamicplugin.exception.InstantiationException;
 
 import java.io.File;
 import java.io.FileFilter;
@@ -203,7 +203,6 @@ public class PluginManager {
      * 检查用户是否配置了占位activity
      */
     private void hasVirtualActivity(){
-        checkInit();
         PackageInfo packageInfo;
         int sum = 0;
         int len = 0;
@@ -226,13 +225,19 @@ public class PluginManager {
     }
 
     /**
+     * 检查是否已经加载插件
+     */
+    private void checkPluginLoaded(){
+        if(!isPluginLoaded){
+            throw new RuntimeException("Please transfer PluginManager.loadPlugin() or PluginManager.loadPlugin(pluginPath) first");
+        }
+    }
+    /**
      * 把插件中目标act中的相关配置信息填充到占位act中
      * @param intent 启动intent
      */
     private void inflatePluginParamsToVirtual(WrapperIntent intent){
-        if(!isPluginLoaded){
-            throw new RuntimeException("Please transfer PluginManager.loadPlugin() or PluginManager.loadPlugin(pluginPath) first");
-        }
+        checkPluginLoaded();
         if (mPlugins != null && mPlugins.size() > 0) {
             String targetPackage = intent.getPkgName();
             String className = intent.getQualifiedClassName();
@@ -299,6 +304,7 @@ public class PluginManager {
      * @param pkgName 包名
      */
     public void startDefaultActivity(Context context, String pkgName){
+        hasVirtualActivity();
         if(mPlugins != null && mPlugins.size() > 0){
             PluginInfo info = mPlugins.get(pkgName);
             String mainActivity = info.getMainActivity();
@@ -314,42 +320,59 @@ public class PluginManager {
     }
 
     /**
-     * 加载插件中的fragment
+     * 通过包名和类全限定名来加载插件中的fragment
      * @param pkgName 插件包名
-     * @param className fragment全限定名
+     * @param qualifiedClassName fragment全限定名
      * @return Fragment
-     * @throws Exception
      */
-    public Fragment loadPluginFragment(String pkgName, String className) throws Exception{
-        return loadPluginFragment(pkgName, className, null);
+    public Fragment loadPluginFragment(String pkgName, String qualifiedClassName){
+        return loadPluginFragment(pkgName, qualifiedClassName, null);
     }
 
     /**
-     * 加载插件中的fragment
+     * 通过包名和类全限定名来加载插件中的fragment
      * @param pkgName 插件包名
-     * @param className fragment全限定名
+     * @param qualifiedClassName fragment全限定名
      * @param args 参数
      * @return Fragment
-     * @throws Exception
      */
-    public Fragment loadPluginFragment(String pkgName, String className, Bundle args) throws Exception{
-        Class<?> clazz = sClassMap.get(className);
-        if(clazz == null){
-            PluginInfo info = mPlugins.get(pkgName);
-            PluginDexClassLoader classLoader = info.getClassLoader();
-            clazz = classLoader.loadClass(className);
-            if(!Fragment.class.isAssignableFrom(clazz)){
-                throw new RuntimeException("Trying to instantiate a class " + className
-                        + " that is not a Fragment", new ClassCastException());
+    public Fragment loadPluginFragment(String pkgName, String qualifiedClassName, Bundle args) {
+        checkPluginLoaded();
+        try{
+            Class<?> clazz = sClassMap.get(qualifiedClassName);
+            if(clazz == null){
+                PluginInfo info = mPlugins.get(pkgName);
+                PluginDexClassLoader classLoader = info.getClassLoader();
+                clazz = classLoader.loadClass(qualifiedClassName);
+                if(!Fragment.class.isAssignableFrom(clazz)){
+                    throw new InstantiationException("Trying to instantiate a class " + qualifiedClassName
+                            + " that is not a Fragment", new ClassCastException());
+                }
+                sClassMap.put(qualifiedClassName, clazz);
             }
-            sClassMap.put(className, clazz);
+            Fragment f = (Fragment)clazz.newInstance();
+            if (args != null) {
+                args.setClassLoader(f.getClass().getClassLoader());
+                try {
+                    ReflectUtils.setFieldValue(clazz, f, "mArguments", args);
+                }catch (Exception e){
+                    e.printStackTrace();
+                }
+            }
+            return f;
+        }catch (ClassNotFoundException e) {
+            throw new RuntimeException("Unable to instantiate fragment " + qualifiedClassName
+                    + ": make sure class name exists, is public, and has an"
+                    + " empty constructor that is public", e);
+        } catch (java.lang.InstantiationException e) {
+            throw new InstantiationException("Unable to instantiate fragment " + qualifiedClassName
+                    + ": make sure class name exists, is public, and has an"
+                    + " empty constructor that is public", e);
+        } catch (IllegalAccessException e) {
+            throw new InstantiationException("Unable to instantiate fragment " + qualifiedClassName
+                    + ": make sure class name exists, is public, and has an"
+                    + " empty constructor that is public", e);
         }
-        Fragment f = (Fragment)clazz.newInstance();
-        if (args != null) {
-            args.setClassLoader(f.getClass().getClassLoader());
-            ReflectUtils.setFieldValue(clazz, f, "mArguments", args);
-        }
-        return f;
     }
 
     /**

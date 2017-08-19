@@ -7,3 +7,7 @@ How to use
 ##### 2.  init PluginManager in your Application class like this ```PluginManager.init(this);```
 ##### 3.  call loadPlugin method and you have two options```PluginManager.loadPlugin(String pluginPath) or PluginManager.loadPlugin()```default plugin path is ```data/data/your packagename/app_d-plugin```
 ##### 4.  now you can call ```PluginManager.getInstance().startActivity(packagename, qualifiedClassName)``` or ```PluginManager.getInstance().startDefaultActivity()``` start target Activity
+
+Status
+----------------------
+##### updating
