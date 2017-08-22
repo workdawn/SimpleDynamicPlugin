@@ -32,6 +32,7 @@ public class MainActivity extends Activity {
             @Override
             public void onClick(View v) {
                 try{
+                    Log.i("miaowei", "宿主fragment中的资源 ： " + getResources());
                     PluginManager.getPluginManager().loadPlugin(Environment.getExternalStorageDirectory() + "/test_plugin.apk");
                     Fragment fragment = PluginManager.getPluginManager().loadPluginFragment("com.workdrawn.actvaluetransfer","com.workdrawn.actvaluetransfer.PluginFragment");
                     getFragmentManager().beginTransaction().replace(R.id.fragment_container, fragment).commit();

@@ -21,7 +21,6 @@ import com.workdawn.simpledynamicplugin.exception.VirtualActivityNotFoundExcepti
 import com.workdawn.simpledynamicplugin.utils.LoadPluginImpl;
 import com.workdawn.simpledynamicplugin.utils.ReflectUtils;
 import com.workdawn.simpledynamicplugin.utils.Utils;
-import com.workdawn.simpledynamicplugin.exception.InstantiationException;
 
 import java.io.File;
 import java.io.FileFilter;
@@ -47,7 +46,6 @@ public class PluginManager {
     /**是否已经加载过插件*/
     private static boolean isPluginLoaded = false;
     private PluginInstrumentation pluginInstrumentation;
-    private static final HashMap<String, Class<?>> sClassMap = new HashMap<String, Class<?>>();
 
     private PluginManager(Context hostContext) throws Exception{
         mPluginPath = hostContext.getDir(Constants.PLUGIN_SAVE_PATH_DIR, Context.MODE_PRIVATE);
@@ -338,41 +336,11 @@ public class PluginManager {
      */
     public Fragment loadPluginFragment(String pkgName, String qualifiedClassName, Bundle args) {
         checkPluginLoaded();
-        try{
-            Class<?> clazz = sClassMap.get(qualifiedClassName);
-            if(clazz == null){
-                PluginInfo info = mPlugins.get(pkgName);
-                PluginDexClassLoader classLoader = info.getClassLoader();
-                clazz = classLoader.loadClass(qualifiedClassName);
-                if(!Fragment.class.isAssignableFrom(clazz)){
-                    throw new InstantiationException("Trying to instantiate a class " + qualifiedClassName
-                            + " that is not a Fragment", new ClassCastException());
-                }
-                sClassMap.put(qualifiedClassName, clazz);
-            }
-            Fragment f = (Fragment)clazz.newInstance();
-            if (args != null) {
-                args.setClassLoader(f.getClass().getClassLoader());
-                try {
-                    ReflectUtils.setFieldValue(clazz, f, "mArguments", args);
-                }catch (Exception e){
-                    e.printStackTrace();
-                }
-            }
-            return f;
-        }catch (ClassNotFoundException e) {
-            throw new RuntimeException("Unable to instantiate fragment " + qualifiedClassName
-                    + ": make sure class name exists, is public, and has an"
-                    + " empty constructor that is public", e);
-        } catch (java.lang.InstantiationException e) {
-            throw new InstantiationException("Unable to instantiate fragment " + qualifiedClassName
-                    + ": make sure class name exists, is public, and has an"
-                    + " empty constructor that is public", e);
-        } catch (IllegalAccessException e) {
-            throw new InstantiationException("Unable to instantiate fragment " + qualifiedClassName
-                    + ": make sure class name exists, is public, and has an"
-                    + " empty constructor that is public", e);
+        if(mPlugins != null && mPlugins.size() > 0){
+            PluginInfo info = mPlugins.get(pkgName);
+            return Fragment.instantiate(info.getPluginContext(), qualifiedClassName, args);
         }
+        return null;
     }
 
     /**
