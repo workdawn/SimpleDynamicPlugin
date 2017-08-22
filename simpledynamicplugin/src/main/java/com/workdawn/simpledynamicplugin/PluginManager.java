@@ -311,9 +311,17 @@ public class PluginManager {
         checkPluginLoaded();
         if(mPlugins != null && mPlugins.size() > 0){
             PluginInfo info = mPlugins.get(pkgName);
+            preparePluginEnv();
             return Fragment.instantiate(info.getPluginContext(), qualifiedClassName, args);
         }
         return null;
+    }
+
+    /**
+     * 准备插件fragment运行时上下文环境
+     */
+    private void preparePluginEnv(){
+        //// TODO: prepare plugin fragment env
     }
 
     /**
