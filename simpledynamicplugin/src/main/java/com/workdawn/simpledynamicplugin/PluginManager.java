@@ -198,31 +198,6 @@ public class PluginManager {
     }
 
     /**
-     * 检查用户是否配置了占位activity
-     */
-    private void hasVirtualActivity(){
-        PackageInfo packageInfo;
-        int sum = 0;
-        int len = 0;
-        try{
-            packageInfo = mHostContext.getPackageManager().getPackageInfo(mHostContext.getPackageName(), PackageManager.GET_ACTIVITIES);
-            ActivityInfo[] activities = packageInfo.activities;
-            sum = activities.length;
-            for (ActivityInfo activityInfo : activities) {
-                if (Constants.VIRTUAL_ACTIVITY.equals(activityInfo.name)) {
-                    return;
-                }
-                len ++;
-            }
-        }catch (Exception e){
-            e.printStackTrace();
-        }
-        if(len == sum){
-            throw new VirtualActivityNotFoundException("VirtualActivity not found ; have you declared this activity in your AndroidManifest.xml?");
-        }
-    }
-
-    /**
      * 检查是否已经加载插件
      */
     private void checkPluginLoaded(){
@@ -273,7 +248,6 @@ public class PluginManager {
      * @param intent 包装过的intent
      */
     public void startActivity(Context context, WrapperIntent intent){
-        hasVirtualActivity();
         inflatePluginParamsToVirtual(intent);
         intent.setClass(context, VirtualActivity.class);
         context.startActivity(intent);
@@ -302,7 +276,6 @@ public class PluginManager {
      * @param pkgName 包名
      */
     public void startDefaultActivity(Context context, String pkgName){
-        hasVirtualActivity();
         if(mPlugins != null && mPlugins.size() > 0){
             PluginInfo info = mPlugins.get(pkgName);
             String mainActivity = info.getMainActivity();
